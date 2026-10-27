@@ -13,7 +13,6 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from agrorule.grammar import (  # noqa: E402
-    CUERPO_POR_ID,
     EPSILON,
     NO_TERMINALES,
     PRODUCCIONES,
@@ -25,6 +24,11 @@ from agrorule.grammar import (  # noqa: E402
 
 DESTINO = RAIZ.parent / "informe" / "tablas"
 DESTINO.mkdir(parents=True, exist_ok=True)
+
+FILA = r"\\"
+EPS = r"$\varepsilon$"
+FLECHA = r"$\rightarrow$"
+DOLAR = r"\$"
 
 NOMBRE_COLUMNA = {
     "WHEN": "WHEN",
@@ -43,12 +47,12 @@ NOMBRE_COLUMNA = {
     "NUM": "num",
     "IDENT": "id",
     "CADENA": "txt",
-    "EOF": "$",
+    "EOF": DOLAR,
 }
 
 NOMBRE_FILA = {
     "programa": "programa",
-    "lista_reglas": "lista\\_reglas",
+    "lista_reglas": r"lista\_reglas",
     "regla": "regla",
     "cond": "cond",
     "disy": "disy",
@@ -70,62 +74,73 @@ NOMBRE_FILA = {
 
 
 def escapar(texto):
-    return texto.replace("_", "\\_").replace("#", "\\#").replace("&", "\\&").replace("%", "\\%")
+    return (texto.replace("_", r"\_").replace("#", r"\#")
+            .replace("&", r"\&").replace("%", r"\%"))
+
+
+def nombre_terminal(terminal):
+    if terminal == "EOF":
+        return DOLAR
+    return NOMBRE_COLUMNA.get(terminal, escapar(terminal))
 
 
 def lista_latex(conjunto):
     orden = [t for t in TERMINALES if t in conjunto]
     if EPSILON in conjunto:
         orden.append(EPSILON)
-    return ", ".join(NOMBRE_COLUMNA.get(t, t) if t != EPSILON else "$\\varepsilon$" for t in orden)
+    partes = [EPS if t == EPSILON else nombre_terminal(t) for t in orden]
+    return ", ".join(partes)
 
 
 def tabla_producciones():
     lineas = [
-        "{\\small\\begin{longtable}{L{1.1cm}L{12.0cm}}",
-        "\\caption{Producciones de la gramática de AgroRule.}\\label{tab:producciones}\\\\",
-        "\\toprule\\textbf{ID}&\\textbf{Producción}\\\\\\midrule\\endfirsthead",
-        "\\toprule\\textbf{ID}&\\textbf{Producción}\\\\\\midrule\\endhead",
+        r"{\small\begin{longtable}{L{1.1cm}L{12.2cm}}",
+        r"\caption{Producciones de la gramática de AgroRule.}\label{tab:producciones}" + FILA,
+        r"\toprule\textbf{ID}&\textbf{Producción}" + FILA + r"\midrule\endfirsthead",
+        r"\toprule\textbf{ID}&\textbf{Producción}" + FILA + r"\midrule\endhead",
     ]
     for pid, cabeza, cuerpo in PRODUCCIONES:
         if cuerpo:
-            rhs = " ".join(escapar(s) if s not in NO_TERMINALES else NOMBRE_FILA.get(s, s) for s in cuerpo)
+            rhs = " ".join(NOMBRE_FILA.get(s, escapar(s)) if s in NO_TERMINALES else escapar(s)
+                           for s in cuerpo)
         else:
-            rhs = "$\\varepsilon$"
-        lineas.append(f"{pid}&{NOMBRE_FILA.get(cabeza, cabeza)} $\\rightarrow$ {rhs}\\\\\\")
-    lineas += ["\\bottomrule\\end{longtable}}", ""]
-    return "\n".join(lineas)
+            rhs = EPS
+        lineas.append(f"{pid}&{NOMBRE_FILA.get(cabeza, cabeza)} {FLECHA} {rhs}" + FILA)
+    lineas.append(r"\bottomrule\end{longtable}}")
+    return "\n".join(lineas) + "\n"
 
 
 def tabla_first_follow(first, follow):
     lineas = [
-        "{\\small\\begin{longtable}{L{3.0cm}L{6.6cm}L{6.2cm}}",
-        "\\caption{Conjuntos FIRST y FOLLOW por no terminal.}\\label{tab:firstfollow}\\\\",
-        "\\toprule\\textbf{No terminal}&\\textbf{FIRST}&\\textbf{FOLLOW}\\\\\\midrule\\endfirsthead",
-        "\\toprule\\textbf{No terminal}&\\textbf{FIRST}&\\textbf{FOLLOW}\\\\\\midrule\\endhead",
+        r"{\small\setlength{\tabcolsep}{4pt}\begin{longtable}{L{2.8cm}L{6.3cm}L{5.9cm}}",
+        r"\caption{Conjuntos FIRST y FOLLOW por no terminal.}\label{tab:firstfollow}" + FILA,
+        r"\toprule\textbf{No terminal}&\textbf{FIRST}&\textbf{FOLLOW}" + FILA + r"\midrule\endfirsthead",
+        r"\toprule\textbf{No terminal}&\textbf{FIRST}&\textbf{FOLLOW}" + FILA + r"\midrule\endhead",
     ]
     for no_terminal in NO_TERMINALES:
         lineas.append(
-            f"{NOMBRE_FILA.get(no_terminal, no_terminal)}&{{{lista_latex(first[no_terminal])}}}&{{{lista_latex(follow[no_terminal])}}}\\\\\\"
+            f"{NOMBRE_FILA.get(no_terminal, no_terminal)}&{{{lista_latex(first[no_terminal])}}}"
+            f"&{{{lista_latex(follow[no_terminal])}}}" + FILA
         )
-    lineas += ["\\bottomrule\\end{longtable}}", ""]
-    return "\n".join(lineas)
+    lineas.append(r"\bottomrule\end{longtable}}")
+    return "\n".join(lineas) + "\n"
 
 
 def tabla_ll1(tabla):
-    columnas = "".join("C{1.05cm}" for _ in TERMINALES)
-    cabecera = "&".join(f"\\rotatebox{{90}}{{\\scriptsize {NOMBRE_COLUMNA[t]}}}" for t in TERMINALES)
+    columnas = "".join("C{0.98cm}" for _ in TERMINALES)
+    cabecera = "&".join(r"\rotatebox{90}{\scriptsize " + nombre_terminal(t) + "}" for t in TERMINALES)
     lineas = [
-        "{\\scriptsize\\begin{longtable}{L{2.0cm}" + columnas + "}",
-        "\\caption{Tabla predictiva LL(1). Cada celda indica la producción que se aplica.}\\label{tab:ll1}\\\\\\",
-        "\\toprule\\textbf{No terminal}&" + cabecera + "\\\\\\midrule\\endfirsthead",
-        "\\toprule\\textbf{No terminal}&" + cabecera + "\\\\\\midrule\\endhead",
+        r"{\scriptsize\setlength{\tabcolsep}{3.4pt}\begin{longtable}{L{1.7cm}" + columnas + "}",
+        r"\caption{Tabla predictiva LL(1). Cada celda indica la producción que se aplica.}"
+        r"\label{tab:ll1}" + FILA,
+        r"\toprule\textbf{No terminal}&" + cabecera + FILA + r"\midrule\endfirsthead",
+        r"\toprule\textbf{No terminal}&" + cabecera + FILA + r"\midrule\endhead",
     ]
     for no_terminal in NO_TERMINALES:
         celdas = [tabla[no_terminal].get(t, "") for t in TERMINALES]
-        lineas.append(NOMBRE_FILA.get(no_terminal, no_terminal) + "&" + "&".join(celdas) + "\\\\")
-    lineas += ["\\bottomrule\\end{longtable}}", ""]
-    return "\n".join(lineas)
+        lineas.append(NOMBRE_FILA.get(no_terminal, no_terminal) + "&" + "&".join(celdas) + FILA)
+    lineas.append(r"\bottomrule\end{longtable}}")
+    return "\n".join(lineas) + "\n"
 
 
 def main():

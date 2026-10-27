@@ -1,8 +1,7 @@
 """Genera la tabla de casos de prueba del informe ejecutando el analizador.
 
 Las 25 entradas se corren de verdad y la tabla muestra el resultado obtenido, no
-el que se esperaba escribir a mano. Si alguna cambia de comportamiento, la tabla
-del informe cambia con ella.
+el esperado escrito a mano. Si el comportamiento cambia, la tabla cambia con el.
 """
 
 import sys
@@ -15,6 +14,7 @@ from agrorule import analizar  # noqa: E402
 from agrorule.errors import ErrorLexico, ErrorSintactico  # noqa: E402
 
 DESTINO = RAIZ.parent / "informe" / "tablas"
+FILA = r"\\"
 
 VALIDOS = [
     "WHEN temperatura > 28 THEN abrir_ventilador END",
@@ -43,18 +43,29 @@ INVALIDOS = [
 ]
 
 LIMITE = [
-    ("", "programa vacío, cero reglas"),
-    ("# solo comentarios", "comentarios sin reglas"),
-    ("WHEN NOT NOT NOT temperatura > 5 THEN calentar END", "negaciones anidadas"),
-    ("WHEN temperatura > 5 THEN avisar END", "acción sin argumentos"),
-    ("WHEN temperatura > 5 THEN regar(1); regar(2); regar(3); cerrar_techo END", "cuatro acciones"),
+    "",
+    "# solo comentarios",
+    "WHEN NOT NOT NOT temperatura > 5 THEN calentar END",
+    "WHEN temperatura > 5 THEN avisar END",
+    "WHEN temperatura > 5 THEN regar(1); regar(2); regar(3); cerrar_techo END",
 ]
 
 
 def escapar(texto):
-    for viejo, nuevo in [("\\", "\\textbackslash{}"), ("_", "\\_"), ("#", "\\#"),
-                         ("&", "\\&"), ("%", "\\%"), ("{", "\\{"), ("}", "\\}"),
-                         ('"', "\\textquotedbl{}"), ("^", "\\^{}"), ("~", "\\textasciitilde{}")]:
+    """Deja el texto apto para \\texttt dentro de una celda de tabla."""
+    reemplazos = [
+        ("\\", r"\textbackslash{}"),
+        ("_", r"\_"),
+        ("#", r"\#"),
+        ("&", r"\&"),
+        ("%", r"\%"),
+        ("{", r"\{"),
+        ("}", r"\}"),
+        ('"', r"\textquotedbl{}"),
+        ("^", r"\^{}"),
+        ("~", r"\textasciitilde{}"),
+    ]
+    for viejo, nuevo in reemplazos:
         texto = texto.replace(viejo, nuevo)
     return texto
 
@@ -62,40 +73,40 @@ def escapar(texto):
 def resultado(programa):
     try:
         arbol = analizar(programa)
-        return f"válida, {len(arbol.reglas)} regla(s)"
+        cantidad = len(arbol.reglas)
+        return f"válida, {cantidad} {'regla' if cantidad == 1 else 'reglas'}"
     except (ErrorSintactico, ErrorLexico) as error:
         mensaje = str(error)
-        if ":" in mensaje:
-            mensaje = mensaje.split(":", 1)[1].strip()
-        return "inválida: " + mensaje[:95]
+        if "):" in mensaje:
+            mensaje = mensaje.split("):", 1)[1].strip()
+        return "inválida: " + mensaje
 
 
-def filas(casos, desde):
-    lineas = []
-    for indice, programa in enumerate(casos, desde):
-        entrada = escapar(programa) if programa else "(vacío)"
-        lineas.append(f"{indice}&\\texttt{{{entrada}}}&{escapar(resultado(programa))}\\\\\\")
-    return lineas
+def fila(numero, programa):
+    entrada = escapar(programa) if programa else "(vacío)"
+    return f"{numero}&\\texttt{{{entrada}}}&{escapar(resultado(programa))}" + FILA
 
 
 def main():
     lineas = [
-        "{\\footnotesize\\begin{longtable}{L{0.7cm}L{8.4cm}L{7.4cm}}",
-        "\\caption{Casos de prueba ejecutados sobre el analizador.}\\label{tab:casos}\\\\",
-        "\\toprule\\textbf{N}&\\textbf{Entrada}&\\textbf{Resultado obtenido}\\\\\\midrule\\endfirsthead",
-        "\\toprule\\textbf{N}&\\textbf{Entrada}&\\textbf{Resultado obtenido}\\\\\\midrule\\endhead",
+        r"{\footnotesize\setlength{\tabcolsep}{4pt}\begin{longtable}{L{0.7cm}L{7.7cm}L{7.1cm}}",
+        r"\caption{Casos de prueba ejecutados sobre el analizador.}\label{tab:casos}" + FILA,
+        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Resultado obtenido}" + FILA + r"\midrule\endfirsthead",
+        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Resultado obtenido}" + FILA + r"\midrule\endhead",
+        r"\multicolumn{3}{l}{\textbf{Válidas}}" + FILA + r"\midrule",
     ]
-    lineas.append("\\multicolumn{3}{l}{\\textbf{Válidas}}\\\\\\midrule")
-    lineas += filas(VALIDOS, 1)
-    lineas.append("\\midrule\\multicolumn{3}{l}{\\textbf{Inválidas}}\\\\\\midrule")
-    lineas += filas(INVALIDOS, 11)
-    lineas.append("\\midrule\\multicolumn{3}{l}{\\textbf{Casos límite}}\\\\\\midrule")
-    for indice, (programa, nota) in enumerate(LIMITE, 21):
-        entrada = escapar(programa) if programa else "(vacío)"
-        lineas.append(f"{indice}&\\texttt{{{entrada}}}&{escapar(resultado(programa))}\\\\\\")
-    lineas += ["\\bottomrule\\end{longtable}}", ""]
+    for numero, programa in enumerate(VALIDOS, 1):
+        lineas.append(fila(numero, programa))
+    lineas.append(r"\midrule\multicolumn{3}{l}{\textbf{Inválidas}}" + FILA + r"\midrule")
+    for numero, programa in enumerate(INVALIDOS, 11):
+        lineas.append(fila(numero, programa))
+    lineas.append(r"\midrule\multicolumn{3}{l}{\textbf{Casos límite}}" + FILA + r"\midrule")
+    for numero, programa in enumerate(LIMITE, 21):
+        lineas.append(fila(numero, programa))
+    lineas.append(r"\bottomrule\end{longtable}}")
+
     DESTINO.mkdir(parents=True, exist_ok=True)
-    (DESTINO / "casos.tex").write_text("\n".join(lineas), encoding="utf-8")
+    (DESTINO / "casos.tex").write_text("\n".join(lineas) + "\n", encoding="utf-8")
     print("tabla de casos generada con", len(VALIDOS) + len(INVALIDOS) + len(LIMITE), "casos")
 
 
