@@ -1,0 +1,2 @@
+WHEN NOT (temperatura > 30 AND lluvia == FALSE) THEN abrir_ventilador(60) END
+WHEN NOT lluvia == TRUE THEN cerrar_techo END

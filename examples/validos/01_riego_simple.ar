@@ -1,0 +1,2 @@
+# riego por humedad baja
+WHEN humedad < 30 THEN regar(20) END

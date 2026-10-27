@@ -1,0 +1,1 @@
+WHEN temperatura > 28 AND humedad < 40 THEN abrir_ventilador(80) END

@@ -1,0 +1,1 @@
+WHEN temperatura > 28 THEN regar(20) abrir_ventilador END

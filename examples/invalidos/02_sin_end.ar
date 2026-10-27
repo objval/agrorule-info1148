@@ -1,0 +1,1 @@
+WHEN temperatura > 28 THEN abrir_ventilador

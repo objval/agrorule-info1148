@@ -1,0 +1,4 @@
+# control de la manana
+WHEN luz >= 800 THEN bajar_malla(50) END
+WHEN temperatura > 28 THEN abrir_ventilador(80) END
+WHEN humedad < 30 THEN regar(20); avisar("riego activo") END
