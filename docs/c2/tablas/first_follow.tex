@@ -1,0 +1,24 @@
+{\small\setlength{\tabcolsep}{4pt}\begin{longtable}{L{2.8cm}L{6.3cm}L{5.9cm}}
+\caption{Conjuntos FIRST y FOLLOW por no terminal.}\label{tab:firstfollow}\\
+\toprule\textbf{No terminal}&\textbf{FIRST}&\textbf{FOLLOW}\\\midrule\endfirsthead
+\toprule\textbf{No terminal}&\textbf{FIRST}&\textbf{FOLLOW}\\\midrule\endhead
+programa&{WHEN, $\varepsilon$}&{\$}\\
+lista\_reglas&{WHEN, $\varepsilon$}&{\$}\\
+regla&{WHEN}&{WHEN, \$}\\
+cond&{NOT, (, id, num, TRUE, FALSE}&{THEN, )}\\
+disy&{NOT, (, id, num, TRUE, FALSE}&{THEN, )}\\
+disy'&{OR, $\varepsilon$}&{THEN, )}\\
+conj&{NOT, (, id, num, TRUE, FALSE}&{THEN, OR, )}\\
+conj'&{AND, $\varepsilon$}&{THEN, OR, )}\\
+neg&{NOT, (, id, num, TRUE, FALSE}&{THEN, OR, AND, )}\\
+prim&{(, id, num, TRUE, FALSE}&{THEN, OR, AND, )}\\
+comp&{id, num, TRUE, FALSE}&{THEN, OR, AND, )}\\
+term&{id, num, TRUE, FALSE}&{THEN, OR, AND, ), op}\\
+acciones&{id}&{END}\\
+acciones'&{;, $\varepsilon$}&{END}\\
+accion&{id}&{END, ;}\\
+llamada&{(, $\varepsilon$}&{END, ;}\\
+args&{id, num, TRUE, FALSE, txt}&{)}\\
+args'&{,, $\varepsilon$}&{)}\\
+arg&{id, num, TRUE, FALSE, txt}&{), ,}\\
+\bottomrule\end{longtable}}

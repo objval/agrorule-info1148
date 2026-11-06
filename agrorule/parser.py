@@ -6,12 +6,15 @@ tabla LL(1) con el token de adelanto. Si la tabla no admite ese token, el error
 incluye el conjunto de simbolos que la gramatica si admitia.
 """
 
+import math
+
 from .ast_nodes import Accion, Comparacion, Negacion, OpBinaria, Programa, Regla, Termino
-from .errors import ErrorSintactico
+from .errors import ErrorLexico, ErrorSintactico
 from .grammar import NO_TERMINALES, NOMBRE_SIMBOLO, construir_tabla, produccion_legible
 from .lexer import tokenizar
 
 FIRST, FOLLOW, TABLA, CONFLICTOS = construir_tabla()
+MAX_GRUPOS_ANIDADOS = 80
 
 # Mensajes para el usuario. Cuando un no terminal falla, se explica en palabras
 # del dominio en vez de mostrar su nombre interno, que solo sirve para depurar.
@@ -40,6 +43,7 @@ class Parser:
         self.tokens = tokens
         self.posicion = 0
         self.reglas_construidas = []
+        self.profundidad_grupos = 0
 
     # ---------------------------------------------------------------- utilidades
     @property
@@ -61,7 +65,7 @@ class Parser:
         produccion = TABLA[no_terminal].get(token.tipo)
         if produccion is None:
             mensaje = MENSAJES.get(no_terminal, f"no hay producción para {no_terminal} con este símbolo")
-            esperado = None if no_terminal in MENSAJES else self._esperados(no_terminal)
+            esperado = self._esperados(no_terminal)
             raise ErrorSintactico(
                 mensaje,
                 token.linea,
@@ -81,6 +85,12 @@ class Parser:
                 encontrado=NOMBRE_SIMBOLO.get(token.tipo, f"{token.valor}"),
             )
         return self._avanzar()
+
+    def _numero(self, token):
+        valor = float(token.valor)
+        if not math.isfinite(valor):
+            raise ErrorLexico("número fuera de rango", token.linea, token.columna)
+        return Termino("numero", valor)
 
     # ------------------------------------------------------------- no terminales
     def programa(self):
@@ -130,17 +140,31 @@ class Parser:
         return izquierda
 
     def neg(self):
-        if self._elegir("neg") == "P12":
+        cantidad = 0
+        while self._elegir("neg") == "P12":
             self._avanzar()
-            return Negacion(self.neg())
-        return self.prim()
+            cantidad += 1
+        resultado = self.prim()
+        for _ in range(cantidad):
+            resultado = Negacion(resultado)
+        return resultado
 
     def prim(self):
         if self._elegir("prim") == "P14":
+            apertura = self.actual
+            if self.profundidad_grupos >= MAX_GRUPOS_ANIDADOS:
+                raise ErrorSintactico(
+                    f"se admiten como máximo {MAX_GRUPOS_ANIDADOS} grupos anidados",
+                    apertura.linea, apertura.columna,
+                )
             self._avanzar()
-            interior = self.cond()
-            self._consumir("RPAREN", "se esperaba un paréntesis de cierre")
-            return interior
+            self.profundidad_grupos += 1
+            try:
+                interior = self.cond()
+                self._consumir("RPAREN", "se esperaba un paréntesis de cierre")
+                return interior
+            finally:
+                self.profundidad_grupos -= 1
         return self.comp()
 
     def comp(self):
@@ -159,7 +183,7 @@ class Parser:
             return Termino("identificador", token.valor)
         if produccion == "P18":
             self._avanzar()
-            return Termino("numero", float(token.valor))
+            return self._numero(token)
         if produccion == "P19":
             self._avanzar()
             return Termino("booleano", True)
@@ -179,6 +203,7 @@ class Parser:
         return Accion(nombre.valor, argumentos, nombre.linea)
 
     def llamada(self):
+        """La acción sin paréntesis no lleva argumentos; `accion()` no es válida."""
         if self._elegir("llamada") == "P26":
             return []
         self._consumir("LPAREN", "se esperaba un paréntesis de apertura")
@@ -198,7 +223,7 @@ class Parser:
         produccion = self._elegir("arg")
         if produccion == "P30":
             self._avanzar()
-            return Termino("numero", float(token.valor))
+            return self._numero(token)
         if produccion == "P31":
             self._avanzar()
             return Termino("booleano", True)

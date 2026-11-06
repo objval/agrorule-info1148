@@ -9,7 +9,8 @@ sys.path.insert(0, str(RAIZ))
 
 from agrorule import analizar  # noqa: E402
 
-SALIDA = RAIZ.parent / "informe" / "figuras"
+SALIDA = (RAIZ / "docs/c2/figuras" if (RAIZ / "docs/c2").exists()
+          else RAIZ.parent / "informe/figuras")
 
 PROGRAMA = """WHEN temperatura > 28 AND humedad < 40 THEN abrir_ventilador(80); avisar("calor") END"""
 

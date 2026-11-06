@@ -1,0 +1,9 @@
+{
+  "producciones": 34,
+  "no_terminales": 19,
+  "terminales": 17,
+  "simbolo_inicial": "programa",
+  "es_ll1": true,
+  "conflictos": 0,
+  "celdas_tabla": 68
+}

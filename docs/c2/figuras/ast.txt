@@ -1,0 +1,13 @@
+programa (1 regla)
+└─ regla (línea 1)
+   ├─ lógico AND
+   │  ├─ comparación >
+   │  │  ├─ identificador temperatura
+   │  │  └─ número 28
+   │  └─ comparación <
+   │     ├─ identificador humedad
+   │     └─ número 40
+   ├─ acción abrir_ventilador
+   │  └─ número 80
+   └─ acción avisar
+      └─ texto "calor"

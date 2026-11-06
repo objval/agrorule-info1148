@@ -11,7 +11,7 @@ from .parser import analizar
 
 
 def _leer_entrada(argumentos):
-    if argumentos.texto:
+    if argumentos.texto is not None:
         return argumentos.texto
     ruta = Path(argumentos.archivo)
     if not ruta.exists():
@@ -53,7 +53,7 @@ def main(argv=None):
         _mostrar_tabla()
         return 0
 
-    if not argumentos.archivo and not argumentos.texto:
+    if argumentos.archivo is None and argumentos.texto is None:
         parser.error("indica un archivo .ar, un programa con --texto o consulta la tabla con --tabla")
 
     try:

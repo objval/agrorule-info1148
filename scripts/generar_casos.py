@@ -1,7 +1,7 @@
-"""Genera la tabla de casos de prueba del informe ejecutando el analizador.
+"""Genera 25 casos ejecutados con resultado esperado, obtenido y observación.
 
-Las 25 entradas se corren de verdad y la tabla muestra el resultado obtenido, no
-el esperado escrito a mano. Si el comportamiento cambia, la tabla cambia con el.
+Cada entrada se analiza y la generación falla si su aceptación difiere de la
+expectativa. Los detalles de errores se obtienen de la excepción real.
 """
 
 import sys
@@ -13,7 +13,8 @@ sys.path.insert(0, str(RAIZ))
 from agrorule import analizar  # noqa: E402
 from agrorule.errors import ErrorLexico, ErrorSintactico  # noqa: E402
 
-DESTINO = RAIZ.parent / "informe" / "tablas"
+DESTINO = (RAIZ / "docs/c2/tablas" if (RAIZ / "docs/c2").exists()
+           else RAIZ.parent / "informe/tablas")
 FILA = r"\\"
 
 VALIDOS = [
@@ -51,6 +52,22 @@ LIMITE = [
 ]
 
 
+OBS_VALIDOS = [
+    "Regla mínima", "AND en la condición", "OR y dos acciones", "NOT con paréntesis",
+    "Dos acciones", "Dos reglas", "Argumento booleano", "Negación repetida",
+    "Agrupación anidada", "Decimales y texto",
+]
+OBS_INVALIDOS = [
+    "Falta THEN", "Falta END", "Falta el valor", "Falta una acción",
+    "Falta separador", "Falta condición", "Falta cerrar grupo",
+    "Símbolo no admitido", "Falta argumento", "Falta operador",
+]
+OBS_LIMITE = [
+    "Lista vacía admitida", "Comentario sin reglas", "NOT repetido",
+    "Acción sin paréntesis", "Cuatro acciones",
+]
+
+
 def escapar(texto):
     """Deja el texto apto para \\texttt dentro de una celda de tabla."""
     reemplazos = [
@@ -74,35 +91,39 @@ def resultado(programa):
     try:
         arbol = analizar(programa)
         cantidad = len(arbol.reglas)
-        return f"válida, {cantidad} {'regla' if cantidad == 1 else 'reglas'}"
+        return True, f"aceptada, {cantidad} {'regla' if cantidad == 1 else 'reglas'}"
     except (ErrorSintactico, ErrorLexico) as error:
-        mensaje = str(error)
-        if "):" in mensaje:
-            mensaje = mensaje.split("):", 1)[1].strip()
-        return "inválida: " + mensaje
+        tipo = "léxico" if isinstance(error, ErrorLexico) else "sintáctico"
+        return False, f"rechazada, {tipo} L{error.linea}:C{error.columna}"
 
 
-def fila(numero, programa):
+def fila(numero, programa, esperado, observacion):
     entrada = escapar(programa) if programa else "(vacío)"
-    return f"{numero}&\\texttt{{{entrada}}}&{escapar(resultado(programa))}" + FILA
+    aceptada, obtenido = resultado(programa)
+    if aceptada != esperado:
+        raise AssertionError(f"caso {numero}: se esperaba {esperado}, se obtuvo {obtenido}")
+    esperado_texto = "acepta" if esperado else "rechaza"
+    return (f"{numero}&\\texttt{{{entrada}}}&{esperado_texto}&{escapar(obtenido)}"
+            f"&{escapar(observacion)}" + FILA)
 
 
 def main():
+    assert (len(VALIDOS), len(INVALIDOS), len(LIMITE)) == (10, 10, 5)
     lineas = [
-        r"{\footnotesize\setlength{\tabcolsep}{4pt}\begin{longtable}{L{0.7cm}L{7.7cm}L{7.1cm}}",
-        r"\caption{Casos de prueba ejecutados sobre el analizador.}\label{tab:casos}" + FILA,
-        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Resultado obtenido}" + FILA + r"\midrule\endfirsthead",
-        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Resultado obtenido}" + FILA + r"\midrule\endhead",
-        r"\multicolumn{3}{l}{\textbf{Válidas}}" + FILA + r"\midrule",
+        r"{\footnotesize\setlength{\tabcolsep}{3pt}\begin{longtable}{L{0.55cm}L{6.5cm}L{1.6cm}L{3.2cm}L{3.7cm}}",
+        r"\caption{Casos de prueba: expectativa y resultado observado al ejecutar el analizador.}\label{tab:casos}" + FILA,
+        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Esperado}&\textbf{Obtenido}&\textbf{Observación}" + FILA + r"\midrule\endfirsthead",
+        r"\toprule\textbf{N}&\textbf{Entrada}&\textbf{Esperado}&\textbf{Obtenido}&\textbf{Observación}" + FILA + r"\midrule\endhead",
+        r"\multicolumn{5}{l}{\textbf{Válidas}}" + FILA + r"\midrule",
     ]
-    for numero, programa in enumerate(VALIDOS, 1):
-        lineas.append(fila(numero, programa))
-    lineas.append(r"\midrule\multicolumn{3}{l}{\textbf{Inválidas}}" + FILA + r"\midrule")
-    for numero, programa in enumerate(INVALIDOS, 11):
-        lineas.append(fila(numero, programa))
-    lineas.append(r"\midrule\multicolumn{3}{l}{\textbf{Casos límite}}" + FILA + r"\midrule")
-    for numero, programa in enumerate(LIMITE, 21):
-        lineas.append(fila(numero, programa))
+    for numero, (programa, observacion) in enumerate(zip(VALIDOS, OBS_VALIDOS, strict=True), 1):
+        lineas.append(fila(numero, programa, True, observacion))
+    lineas.append(r"\midrule\multicolumn{5}{l}{\textbf{Inválidas}}" + FILA + r"\midrule")
+    for numero, (programa, observacion) in enumerate(zip(INVALIDOS, OBS_INVALIDOS, strict=True), 11):
+        lineas.append(fila(numero, programa, False, observacion))
+    lineas.append(r"\midrule\multicolumn{5}{l}{\textbf{Casos límite}}" + FILA + r"\midrule")
+    for numero, (programa, observacion) in enumerate(zip(LIMITE, OBS_LIMITE, strict=True), 21):
+        lineas.append(fila(numero, programa, True, observacion))
     lineas.append(r"\bottomrule\end{longtable}}")
 
     DESTINO.mkdir(parents=True, exist_ok=True)

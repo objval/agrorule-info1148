@@ -6,6 +6,7 @@ esta misma corrida.
 
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -13,7 +14,8 @@ from PIL import Image, ImageDraw, ImageFont
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-SALIDA = RAIZ.parent / "informe" / "figuras"
+SALIDA = (RAIZ / "docs/c2/figuras" if (RAIZ / "docs/c2").exists()
+          else RAIZ.parent / "informe/figuras")
 PY = sys.executable
 
 CASOS = [
@@ -24,7 +26,7 @@ CASOS = [
 
 
 def render(texto, destino):
-    lineas = texto.splitlines()[:48]
+    lineas = [parte for linea in texto.splitlines() for parte in (textwrap.wrap(linea, width=88, subsequent_indent="  ", break_long_words=False) or [""])][:48]
     fuente = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 15)
     ancho = max(len(linea) for linea in lineas) * 9 + 40
     alto = len(lineas) * 22 + 70

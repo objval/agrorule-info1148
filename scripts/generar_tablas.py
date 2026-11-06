@@ -22,7 +22,8 @@ from agrorule.grammar import (  # noqa: E402
     es_ll1,
 )
 
-DESTINO = RAIZ.parent / "informe" / "tablas"
+DESTINO = (RAIZ / "docs/c2/tablas" if (RAIZ / "docs/c2").exists()
+           else RAIZ.parent / "informe/tablas")
 DESTINO.mkdir(parents=True, exist_ok=True)
 
 FILA = r"\\"

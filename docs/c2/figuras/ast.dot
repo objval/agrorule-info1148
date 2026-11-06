@@ -1,0 +1,29 @@
+digraph AST {
+  rankdir=TB;
+  node [shape=box, fontname="Arial", fontsize=10];
+  n1 [label="programa (1 regla)"];
+  n2 [label="regla (línea 1)"];
+  n1 -> n2;
+  n3 [label="lógico AND"];
+  n2 -> n3;
+  n4 [label="comparación >"];
+  n3 -> n4;
+  n5 [label="identificador temperatura"];
+  n4 -> n5;
+  n6 [label="número 28"];
+  n4 -> n6;
+  n7 [label="comparación <"];
+  n3 -> n7;
+  n8 [label="identificador humedad"];
+  n7 -> n8;
+  n9 [label="número 40"];
+  n7 -> n9;
+  n10 [label="acción abrir_ventilador"];
+  n2 -> n10;
+  n11 [label="número 80"];
+  n10 -> n11;
+  n12 [label="acción avisar"];
+  n2 -> n12;
+  n13 [label="texto \"calor\""];
+  n12 -> n13;
+}

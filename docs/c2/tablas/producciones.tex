@@ -1,0 +1,39 @@
+{\small\begin{longtable}{L{1.1cm}L{12.2cm}}
+\caption{Producciones de la gramática de AgroRule.}\label{tab:producciones}\\
+\toprule\textbf{ID}&\textbf{Producción}\\\midrule\endfirsthead
+\toprule\textbf{ID}&\textbf{Producción}\\\midrule\endhead
+P1&programa $\rightarrow$ lista\_reglas\\
+P2&lista\_reglas $\rightarrow$ regla lista\_reglas\\
+P3&lista\_reglas $\rightarrow$ $\varepsilon$\\
+P4&regla $\rightarrow$ WHEN cond THEN acciones END\\
+P5&cond $\rightarrow$ disy\\
+P6&disy $\rightarrow$ conj disy'\\
+P7&disy' $\rightarrow$ OR conj disy'\\
+P8&disy' $\rightarrow$ $\varepsilon$\\
+P9&conj $\rightarrow$ neg conj'\\
+P10&conj' $\rightarrow$ AND neg conj'\\
+P11&conj' $\rightarrow$ $\varepsilon$\\
+P12&neg $\rightarrow$ NOT neg\\
+P13&neg $\rightarrow$ prim\\
+P14&prim $\rightarrow$ LPAREN cond RPAREN\\
+P15&prim $\rightarrow$ comp\\
+P16&comp $\rightarrow$ term OP\_REL term\\
+P17&term $\rightarrow$ IDENT\\
+P18&term $\rightarrow$ NUM\\
+P19&term $\rightarrow$ TRUE\\
+P20&term $\rightarrow$ FALSE\\
+P21&acciones $\rightarrow$ accion acciones'\\
+P22&acciones' $\rightarrow$ SEMI accion acciones'\\
+P23&acciones' $\rightarrow$ $\varepsilon$\\
+P24&accion $\rightarrow$ IDENT llamada\\
+P25&llamada $\rightarrow$ LPAREN args RPAREN\\
+P26&llamada $\rightarrow$ $\varepsilon$\\
+P27&args $\rightarrow$ arg args'\\
+P28&args' $\rightarrow$ COMMA arg args'\\
+P29&args' $\rightarrow$ $\varepsilon$\\
+P30&arg $\rightarrow$ NUM\\
+P31&arg $\rightarrow$ TRUE\\
+P32&arg $\rightarrow$ FALSE\\
+P33&arg $\rightarrow$ IDENT\\
+P34&arg $\rightarrow$ CADENA\\
+\bottomrule\end{longtable}}

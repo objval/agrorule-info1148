@@ -55,7 +55,7 @@ def _es_letra(caracter):
 
 
 def _es_digito(caracter):
-    return caracter.isdigit()
+    return "0" <= caracter <= "9"
 
 
 def tokenizar(texto):
@@ -97,7 +97,7 @@ def tokenizar(texto):
                 i += 1
                 columna += 1
             valor = texto[inicio:i]
-            if valor.count(".") > 1:
+            if valor.count(".") > 1 or valor.endswith("."):
                 raise ErrorLexico(f"número mal formado: {valor}", linea, inicio_col)
             tokens.append(Token("NUM", valor, linea, inicio_col))
             continue
@@ -109,7 +109,7 @@ def tokenizar(texto):
                 i += 1
                 columna += 1
             palabra = texto[inicio:i]
-            tipo = RESERVADAS.get(palabra.upper(), "IDENT")
+            tipo = RESERVADAS.get(palabra, "IDENT")
             tokens.append(Token(tipo, palabra, linea, inicio_col))
             continue
 

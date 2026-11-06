@@ -5,6 +5,7 @@ que exige el enunciado del proyecto.
 """
 
 import sys
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from agrorule import ErrorSintactico, analizar  # noqa: E402
 from agrorule.errors import ErrorLexico  # noqa: E402
 from agrorule.grammar import construir_tabla, es_ll1  # noqa: E402
+from agrorule.lexer import tokenizar  # noqa: E402
 
 VALIDOS = [
     "WHEN temperatura > 28 THEN abrir_ventilador END",
@@ -115,6 +117,49 @@ class PruebasInvalidas(unittest.TestCase):
             analizar("WHEN temperatura > 28\nTHEN regar(20) abrir_ventilador END")
         self.assertIn("línea 2", str(contexto.exception))
 
+    def test_error_muestra_terminales_de_la_tabla(self):
+        with self.assertRaises(ErrorSintactico) as contexto:
+            analizar("WHEN THEN regar END")
+        esperados = contexto.exception.esperado
+        self.assertIn("NOT", esperados)
+        self.assertIn("identificador", esperados)
+        self.assertIn("(", esperados)
+        self.assertIn("Se esperaba:", str(contexto.exception))
+
+    def test_palabras_reservadas_distinguen_mayusculas(self):
+        for palabra in ("when", "When"):
+            with self.subTest(palabra=palabra):
+                with self.assertRaises(ErrorSintactico):
+                    analizar(f"{palabra} a > 1 THEN regar END")
+        self.assertEqual(tokenizar("true")[0].tipo, "IDENT")
+
+    def test_digitos_no_ascii_se_rechazan_sin_excepcion_nativa(self):
+        for valor in ("²", "١", "a²"):
+            with self.subTest(valor=valor):
+                with self.assertRaises(ErrorLexico):
+                    analizar(f"WHEN a > {valor} THEN regar END")
+
+    def test_decimales_incompletos_se_rechazan(self):
+        for valor in ("1.", "1.2.3"):
+            with self.subTest(valor=valor):
+                with self.assertRaises(ErrorLexico) as contexto:
+                    analizar(f"WHEN a > {valor} THEN regar END")
+                self.assertIn("mal formado", str(contexto.exception))
+
+    def test_numeros_fuera_de_rango_se_rechazan_en_ambos_contextos(self):
+        enorme = "9" * 400
+        for programa in (f"WHEN a > {enorme} THEN regar END",
+                         f"WHEN a > 1 THEN regar({enorme}) END"):
+            with self.subTest(argumento="regar(" in programa):
+                with self.assertRaises(ErrorLexico) as contexto:
+                    analizar(programa)
+                self.assertIn("fuera de rango", str(contexto.exception))
+
+    def test_llamada_sin_argumentos_no_pertenece_a_la_gramatica(self):
+        with self.assertRaises(ErrorSintactico) as contexto:
+            analizar("WHEN a > 1 THEN regar() END")
+        self.assertIn("argumento", str(contexto.exception))
+
 
 class PruebasLimite(unittest.TestCase):
     def test_casos_limite(self):
@@ -128,10 +173,50 @@ class PruebasLimite(unittest.TestCase):
         arbol = analizar(programa)
         self.assertEqual(len(arbol.reglas), 1)
 
+    def test_limite_de_grupos_informa_posicion(self):
+        programa = "WHEN " + "(" * 81 + "a > 1" + ")" * 81 + " THEN regar END"
+        with self.assertRaises(ErrorSintactico) as contexto:
+            analizar(programa)
+        self.assertIn("80 grupos anidados", str(contexto.exception))
+        self.assertIn("columna 86", str(contexto.exception))
+
     def test_texto_largo_en_argumentos(self):
         programa = 'WHEN a > 1 THEN avisar("' + "x" * 500 + '") END'
         arbol = analizar(programa)
         self.assertEqual(len(arbol.reglas[0].acciones[0].argumentos[0].valor), 500)
+
+    def test_negaciones_consecutivas_no_desbordan(self):
+        cantidad = 1200
+        arbol = analizar("WHEN " + "NOT " * cantidad + "a > 1 THEN regar END")
+        condicion = arbol.reglas[0].condicion
+        for _ in range(cantidad):
+            self.assertEqual(type(condicion).__name__, "Negacion")
+            condicion = condicion.expresion
+        self.assertEqual(type(condicion).__name__, "Comparacion")
+
+class PruebasCLI(unittest.TestCase):
+    def ejecutar(self, *argumentos):
+        return subprocess.run(
+            [sys.executable, "-m", "agrorule", *argumentos],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True, text=True, check=False,
+        )
+
+    def test_texto_vacio_y_archivo_omitido(self):
+        vacio = self.ejecutar("--texto", "")
+        self.assertEqual(vacio.returncode, 0, vacio.stderr)
+        self.assertIn("Reglas reconocidas: 0", vacio.stdout)
+        omitido = self.ejecutar()
+        self.assertEqual(omitido.returncode, 2)
+        self.assertIn("indica un archivo", omitido.stderr)
+
+    def test_errores_cli_no_muestran_traceback(self):
+        for valor in ("²", "1.", "9" * 400):
+            with self.subTest(valor=valor[:20]):
+                proceso = self.ejecutar("--texto", f"WHEN a > {valor} THEN regar END")
+                self.assertEqual(proceso.returncode, 1, proceso.stderr)
+                self.assertIn("Error léxico", proceso.stdout)
+                self.assertNotIn("Traceback", proceso.stderr)
 
 
 if __name__ == "__main__":

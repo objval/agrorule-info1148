@@ -1,0 +1,33 @@
+{\footnotesize\setlength{\tabcolsep}{3pt}\begin{longtable}{L{0.55cm}L{6.5cm}L{1.6cm}L{3.2cm}L{3.7cm}}
+\caption{Casos de prueba: expectativa y resultado observado al ejecutar el analizador.}\label{tab:casos}\\
+\toprule\textbf{N}&\textbf{Entrada}&\textbf{Esperado}&\textbf{Obtenido}&\textbf{Observación}\\\midrule\endfirsthead
+\toprule\textbf{N}&\textbf{Entrada}&\textbf{Esperado}&\textbf{Obtenido}&\textbf{Observación}\\\midrule\endhead
+\multicolumn{5}{l}{\textbf{Válidas}}\\\midrule
+1&\texttt{WHEN temperatura > 28 THEN abrir\_ventilador END}&acepta&aceptada, 1 regla&Regla mínima\\
+2&\texttt{WHEN humedad < 30 AND temperatura > 25 THEN regar(20) END}&acepta&aceptada, 1 regla&AND en la condición\\
+3&\texttt{WHEN suelo == seco OR lluvia == FALSE THEN regar(15); avisar(\textquotedbl{}riego activo\textquotedbl{}) END}&acepta&aceptada, 1 regla&OR y dos acciones\\
+4&\texttt{WHEN NOT (temperatura > 30) THEN cerrar\_techo END}&acepta&aceptada, 1 regla&NOT con paréntesis\\
+5&\texttt{WHEN luz >= 800 THEN bajar\_malla(50); encender\_extractor END}&acepta&aceptada, 1 regla&Dos acciones\\
+6&\texttt{WHEN temperatura > 28 THEN abrir\_ventilador END WHEN humedad < 30 THEN regar(20) END}&acepta&aceptada, 2 reglas&Dos reglas\\
+7&\texttt{WHEN CO2 > 900 AND humedad > 80 THEN ventilar(TRUE) END}&acepta&aceptada, 1 regla&Argumento booleano\\
+8&\texttt{WHEN NOT NOT lluvia == TRUE THEN cerrar\_techo END}&acepta&aceptada, 1 regla&Negación repetida\\
+9&\texttt{WHEN ((temperatura > 28)) THEN abrir\_ventilador(75) END}&acepta&aceptada, 1 regla&Agrupación anidada\\
+10&\texttt{WHEN ph >= 6.5 AND ph <= 7.5 THEN fertirriego(1.5, \textquotedbl{}nitrato\textquotedbl{}) END}&acepta&aceptada, 1 regla&Decimales y texto\\
+\midrule\multicolumn{5}{l}{\textbf{Inválidas}}\\\midrule
+11&\texttt{WHEN temperatura > 28 abrir\_ventilador END}&rechaza&rechazada, sintáctico L1:C23&Falta THEN\\
+12&\texttt{WHEN temperatura > 28 THEN abrir\_ventilador}&rechaza&rechazada, sintáctico L1:C44&Falta END\\
+13&\texttt{WHEN temperatura > THEN abrir\_ventilador END}&rechaza&rechazada, sintáctico L1:C20&Falta el valor\\
+14&\texttt{WHEN temperatura > 28 THEN END}&rechaza&rechazada, sintáctico L1:C28&Falta una acción\\
+15&\texttt{WHEN temperatura > 28 THEN regar(20) abrir\_ventilador END}&rechaza&rechazada, sintáctico L1:C38&Falta separador\\
+16&\texttt{WHEN THEN regar(20) END}&rechaza&rechazada, sintáctico L1:C6&Falta condición\\
+17&\texttt{WHEN (temperatura > 28 THEN regar(20) END}&rechaza&rechazada, sintáctico L1:C24&Falta cerrar grupo\\
+18&\texttt{WHEN temperatura > 28 THEN regar(20) END @}&rechaza&rechazada, léxico L1:C42&Símbolo no admitido\\
+19&\texttt{WHEN temperatura > 28 THEN regar(20, ) END}&rechaza&rechazada, sintáctico L1:C38&Falta argumento\\
+20&\texttt{WHEN temperatura 28 THEN regar(20) END}&rechaza&rechazada, sintáctico L1:C18&Falta operador\\
+\midrule\multicolumn{5}{l}{\textbf{Casos límite}}\\\midrule
+21&\texttt{(vacío)}&acepta&aceptada, 0 reglas&Lista vacía admitida\\
+22&\texttt{\# solo comentarios}&acepta&aceptada, 0 reglas&Comentario sin reglas\\
+23&\texttt{WHEN NOT NOT NOT temperatura > 5 THEN calentar END}&acepta&aceptada, 1 regla&NOT repetido\\
+24&\texttt{WHEN temperatura > 5 THEN avisar END}&acepta&aceptada, 1 regla&Acción sin paréntesis\\
+25&\texttt{WHEN temperatura > 5 THEN regar(1); regar(2); regar(3); cerrar\_techo END}&acepta&aceptada, 1 regla&Cuatro acciones\\
+\bottomrule\end{longtable}}
